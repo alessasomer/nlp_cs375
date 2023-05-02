@@ -2,6 +2,9 @@ import tweepy
 import config
 import json
 import numpy as np
+import torch
+import torch.nn as nn
+import pandas as pd
 from gensim.models.keyedvectors import KeyedVectors
 #import configparser
 
@@ -69,10 +72,35 @@ api = tweepy.API(auth)
         #print("Tweet with ID" , t["id"] , "does not exist")
         #continue
 
+# create dataframe
+columns = ['Label', 'Tweet']
+data = []
+for t in trainingList:
+    try:
+        status = api.get_status(t["id"])
+
+        #get text
+        text = status.text
+        #print(text)
+        data.append([t["label"], text])
+    except:
+        #print("Tweet with ID" , t["id"] , "does not exist")
+        continue
+    df = pd.DataFrame(data, columns=columns)
+    df.to_csv('tweets.csv') 
+    print(df)
+
 #call deepaveragingmodel 
 def main():
     from deepaverage import DeepAveragingNetwork
     model = DeepAveragingNetwork(2, embed_array_w_oov,50, 20, 20, 0.01,0.1)
+    # Random inputs to check syntax
+    X_batch = torch.randint(low=0, high=len(vocab2indx), size=(100, 10))
+    print(X_batch.shape)
+    log_probs_out = model.forward(X_batch)
+    
+    #loss_fn= nn.NLLLoss() #For binary logistic regression 
+    #optimizer = torch.optim.SGD(model.parameters(), lr=1e-1) #stochastic
 
 if __name__ == '__main__':
     main()

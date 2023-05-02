@@ -31,16 +31,6 @@ vocab2indx["<OOV>"] = new_oov_entry
 embed_array_w_oov = add_the_embedding(embed_array, vocab2indx)
 pretrained_embedding_matrix = embed_array_w_oov
 
-def pad(original_indices_list: list, pad_index: int, maximum_length=100) -> list: 
-    """
-    Given original_indices_list, concatenates the pad_index enough times 
-    to make the list to maximum_length. 
-    """
-    #NOT SURE IF IM DOING THIS RIGHT LOL
-    while len(original_indices_list) < maximum_length:
-        original_indices_list.append(pad_index)
-    return original_indices_list
-
 trainingList =[]
 with open('training.txt') as file_object:
     for jsonObj in file_object:
@@ -61,18 +51,7 @@ auth.set_access_token(access_token, access_token_secret)
 #call Api
 api = tweepy.API(auth)
 
-#for t in trainingList:
-    #try:
-        #status = api.get_status(t["id"])
-
-        #get text
-        #text = status.text
-        #print(text)
-    #except:
-        #print("Tweet with ID" , t["id"] , "does not exist")
-        #continue
-
-# create dataframe
+#create dataframe
 columns = ['Label', 'Tweet']
 data = []
 for t in trainingList:
@@ -99,7 +78,7 @@ def main():
     print(X_batch.shape)
     log_probs_out = model.forward(X_batch)
     
-    #loss_fn= nn.NLLLoss() #For binary logistic regression 
+    loss_fn= nn.NLLLoss() #For binary logistic regression 
     #optimizer = torch.optim.SGD(model.parameters(), lr=1e-1) #stochastic
 
 if __name__ == '__main__':

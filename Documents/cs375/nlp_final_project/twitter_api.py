@@ -74,26 +74,25 @@ class Twitter:
         embed_array = embeddings.vectors # matrix of dense word embeddings 
                                     # rows: a word 
                                     # columns: dimensions (50) of the dense embeddings
-
-        def add_the_embedding(embed_array, self._vocab2indx, embedding_dim=50): 
-            """
-            Adds "the" embedding to the embed_array matrix
-            """
-            the_embedding = embed_array[self._vocab2indx["the"]]
-            out = np.vstack((embed_array, the_embedding))
-            return out
-
         # Add <OOV> symbol 
         new_oov_entry = len(embeddings)
         idx2vocab += ["<OOV>"]
         self._vocab2indx["<OOV>"] = new_oov_entry
-        embed_array_w_oov = add_the_embedding(embed_array, self._vocab2indx)
-        pretrained_embedding_matrix = embed_array_w_oov
+        #add_the_embedding
+        the_embedding = embed_array[self._vocab2indx["the"]]
+        embed_array_w_oov = np.vstack((embed_array, the_embedding))
+        # Add <PAD> symbol (also as embedding for the word type "the")
+        new_pad_entry = len(idx2vocab)
+        idx2vocab += ["<PAD>"]
+        self._vocab2indx["<PAD>"] = new_pad_entry
+        #the_embedding = embed_array_w_oov[self._vocab2indx["<PAD>"]]
+        #embed_array_w_oov_pad = np.vstack((embed_array_w_oov, the_embedding))
+        #pretrained_embedding_matrix = embed_array_w_oov_pad
         #print(type(pretrained_embedding_matrix))
-        return pretrained_embedding_matrix
-    
+        #return pretrained_embedding_matrix
+        return embed_array_w_oov
 
-    def create_word_indices(self) -> list[int]: 
+    def create_X_train(self) -> list[int]: 
         """
         For each example, translate each token into its corresponding index from vocab2indx
     
@@ -105,13 +104,18 @@ class Twitter:
         Returns: 
         - (List[int]): list of integers
         """ 
+        MAXIMUM_LENGTH = 25
         indexes = []
-        for t in self._tweet_examples:
-            if self._vocab2indx.get(t) is not None:
-                indexes.append(vocab2indx[t])
-            else:
-                indexes.append(self._vocab2indxocab2indx['<OOV>'])
-        return indexes
+        X_list = []
+        for example in self._tweet_examples:
+            for token in example:
+                if self._vocab2indx.get(token) is not None:
+                    indexes.append(self._vocab2indx[token])
+                else:
+                    indexes.append(self._vocab2indxocab2indx['<OOV>'])
+            #Truncate
+            indexes = indexes[:MAXIMUM_LENGTH]
+            #pad
 
 #call deepaveragingmodel 
 def main():

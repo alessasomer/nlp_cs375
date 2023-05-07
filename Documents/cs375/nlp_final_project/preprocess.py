@@ -61,10 +61,11 @@ class Twitter:
         Takes in a list of tweets (str) and uses the nltk tweet tozenizer to tokenize each text string 
         RETURNS: A list of lists, where the inner list are the string tokens from one tweet
         """
+        tokenized_tweet_examples = [[]]
         tknzr = TweetTokenizer()
         for t in tweet_examples:
-            tweet_examples[tweet_examples(t)] = tknzr.tokenize(t)
-        return tweet_examples
+            tokenized_tweet_examples.append(tknzr.tokenize(t))
+        return tokenized_tweet_examples
 
     def create_embeddings(self) -> np.ndarray:
         """
@@ -126,9 +127,9 @@ class Twitter:
 def main():
     twitter = Twitter()
     test_data = twitter.create_tweetcsv('training.txt')
-    print(test_data[0])
-    print(type(test_data[0]))
-    #tweet_examples_test = twitter.create_tokens(test_data[0])
+    #print(test_data[0])
+    #print(type(test_data[0]))
+    tweet_examples_test = twitter.create_tokens(test_data[0])
     #tweet_examples_dev , label_examples_dev = twitter.create_tweetcsv('dev.txt')
     embedding_array = twitter.create_embeddings()
     #hey = twitter.create_X_train(tweet_examples_test)

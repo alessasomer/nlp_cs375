@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import pandas as pd
 from nltk.tokenize import TweetTokenizer
+import pickle
 
 class DeepAveragingNetwork(nn.Module):
     """
@@ -174,6 +175,18 @@ def main():
     HIDDEN_DIM2 = 100
     LEAKY_RELU_NEG_SLOPE = 0.01
     DROPOUT_PROB = 0.4 
+    #get preprocessed data
+    file = open('mypickle.pickle', 'rb')
+    # dump information to that file
+    data = pickle.load(file)
+    # close the file
+    file.close()
+    X_train = data[0]
+    Y_train = data[1]
+    X_dev = data[2]
+    Y_dev = data[3]
+    print(X_train)
+    
     from preprocess import Twitter
     twitter = Twitter()
     embed_array = twitter.create_embeddings()
@@ -188,10 +201,7 @@ def main():
     #print(X_batch.shape)
     #log_probs_out = model.forward(X_batch)
     NUMBER_ITERATIONS = 300
-    X_train = twitter.create_Xtrain_tensor()
-    print("x train:")
-    X_dev = twitter.create_Xdev_tensor()
-    loss_history, train_accuracy, dev_accuracy = model.train_model(X_train, twitter.get_Y_train(), X_dev, twitter.get_Y_dev(), 
+    loss_history, train_accuracy, dev_accuracy = model.train_model(X_train, Y_train, X_dev, Y_dev, 
                                                              loss_fn, optimizer, NUMBER_ITERATIONS, 
                                                              batch_size = 200,
                                                              check_every=50, verbose=False)

@@ -215,14 +215,16 @@ def main():
    twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
    X_train = twitter.create_Xtrain_tensor()
    X_dev = twitter.create_Xdev_tensor()
-   Y_train = twitter._train_data[0]
-   Y_dev = twitter._dev_data[0]
+   Y_train = twitter._train_data[1]
+   Y_dev = twitter._dev_data[1]
    #print(X_list[0:5])
-   with open('mypickle.pickle', 'wb') as f:
-       pickle.dump(X_train, f)
-       pickle.dump(Y_train, f)
-       pickle.dump(X_dev, f)
-       pickle.dump(Y_dev, f)
+   # open a file, where you ant to store the data
+   data = [X_train, X_dev, Y_train, Y_dev]
+   file = open('mypickle.pickle', 'wb')
+   # dump information to that file
+   pickle.dump(data, file)
+   # close the file
+   file.close()
 
 if __name__ == '__main__':
    main()

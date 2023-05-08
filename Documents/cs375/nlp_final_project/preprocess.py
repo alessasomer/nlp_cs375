@@ -137,6 +137,8 @@ class Twitter:
        #vocab2indx is a dictionary where keys are words in vocab
            #values are the "index" of a word- an int correspinding to the row index for the embedding in embed_array
        self._vocab2indx = dict(embeddings.key_to_index)
+       if self._vocab2indx is not None:
+           print("vocab not none")
        idx2vocab = list(embeddings.index_to_key)
        self._len_idx2vocab = len(idx2vocab)
        self._embed_array = embeddings.vectors # matrix of dense word embeddings

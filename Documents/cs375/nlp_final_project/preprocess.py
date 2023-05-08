@@ -7,6 +7,7 @@ import torch.nn as nn
 import pandas as pd
 from gensim.models.keyedvectors import KeyedVectors
 from nltk.tokenize import TweetTokenizer
+import pickle
 
 
 class Twitter:
@@ -14,15 +15,15 @@ class Twitter:
        self._vocab2indx = dict
        self._embed_array = None
        self._len_idx2vocab = int
-       self._train_data = None
-       self._dev_data = None
+       self._train_data = ([], [])
+       self._dev_data = ([], [])
        self._X_train_list = []
        self._X_dev_list = []
 
 
    def create_tweetcsv_test(self):
        trainingList =[]
-       with open('training.txt') as file_object:
+       with open('test.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -52,11 +53,8 @@ class Twitter:
        for t in trainingList:
            try:
                status = api.get_status(t["id"])
-
-
                #get text
                text = status.text
-               #print(text)
                data.append([t["label"], text])
            except:
                #print("Tweet with ID" , t["id"] , "does not exist")
@@ -70,7 +68,7 @@ class Twitter:
   
    def create_tweetcsv_dev(self):
        trainingList =[]
-       with open('dev.txt') as file_object:
+       with open('testdev.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -190,16 +188,16 @@ class Twitter:
        return indexes
   
    def get_Y_train(self):
-       return self._train_data[0]
+        return torch.LongTensor(self._train_data[1])
   
    def get_Y_dev(self):
-       return self._dev_data[0]
+       return torch.LongTensor(self._dev_data[1])
   
    def create_Xtrain_tensor(self):
-       return torch.LongTensor(self._X_train_list), torch.LongTensor(self._train_data[1])
+       return torch.LongTensor(self._X_train_list)
   
    def create_Xdev_tensor(self):
-       return torch.LongTensor(self._X_dev_list), torch.LongTensor(self._dev_data[1])
+       return torch.LongTensor(self._X_dev_list)
 
 
 #call deepaveragingmodel
@@ -211,13 +209,20 @@ def main():
    tweet_examples_dev = twitter.create_tokens(twitter._dev_data[0])
    twitter._embed_array = twitter.create_embeddings()
    #print(tweet_examples_test[0][0:5])
+   #print(tweet_examples_test)
    twitter._X_train_list = twitter.create_train(tweet_examples_test)
+   #print(twitter._X_train_list)
    twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
+   X_train = twitter.create_Xtrain_tensor()
+   X_dev = twitter.create_Xdev_tensor()
+   Y_train = twitter._train_data[0]
+   Y_dev = twitter._dev_data[0]
    #print(X_list[0:5])
-   #X_train = create_Xdev_tensor()
-   #Y_dev = create_train_tensor(Y_list)
-   #print(X_train.shape)
-
+   with open('mypickle.pickle', 'wb') as f:
+       pickle.dump(X_train, f)
+       pickle.dump(Y_train, f)
+       pickle.dump(X_dev, f)
+       pickle.dump(Y_dev, f)
 
 if __name__ == '__main__':
    main()

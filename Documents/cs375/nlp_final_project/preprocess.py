@@ -23,7 +23,7 @@ class Twitter:
 
    def create_tweetcsv_test(self):
        trainingList =[]
-       with open('test.txt') as file_object:
+       with open('training.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -68,7 +68,7 @@ class Twitter:
   
    def create_tweetcsv_dev(self):
        trainingList =[]
-       with open('testdev.txt') as file_object:
+       with open('dev.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -131,7 +131,7 @@ class Twitter:
        """
        Create emebeddings and add OOV (initialze as "the) to vocabulary, and pad + truncate embeddings
        """
-       embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove50_4k.txt", binary=False)
+       embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove.twitter.27B.50d.txt", binary=False)
        #vocab2indx is a dictionary where keys are words in vocab
            #values are the "index" of a word- an int correspinding to the row index for the embedding in embed_array
        self._vocab2indx = dict(embeddings.key_to_index)
@@ -171,7 +171,7 @@ class Twitter:
        Returns:
        - (List[int]): list of integers
        """
-       MAXIMUM_LENGTH = 100
+       MAXIMUM_LENGTH = 50
        indexes = []
        for example in tweet_examples:
            for token in example:

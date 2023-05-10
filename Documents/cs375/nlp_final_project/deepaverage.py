@@ -26,8 +26,7 @@ class DeepAveragingNetwork(nn.Module):
         - Make sure all your dimesions of various layers work out correctly 
         """
         super().__init__()
-        self.num_classes = num_classes 
-        
+        self.num_classes = num_classes
         self.pretrained_embedding_matrix = pretrained_embedding_matrix
         self.embedding_dim = embedding_dim
         self.leaky_relu_negative_slope = leaky_relu_negative_slope
@@ -36,8 +35,8 @@ class DeepAveragingNetwork(nn.Module):
         self.hidden_dim2 = hidden_dim2
         #create a hidden linear layer (X_batch.shape[1] = number of embeddings)
         self.hidden1 = nn.Linear(embedding_dim, self.hidden_dim1)
-        self.hidden2 = nn.Linear(self.hidden_dim1, embedding_dim)
-        self.theta = nn.Linear(embedding_dim, num_classes)
+        self.hidden2 = nn.Linear(self.hidden_dim1, self.hidden_dim2)
+        self.theta = nn.Linear(self.hidden_dim2, num_classes)
         self.log_softmax = nn.LogSoftmax(dim=1)
         
     def forward(self, X_batch: torch.Tensor) -> torch.Tensor:
@@ -55,6 +54,8 @@ class DeepAveragingNetwork(nn.Module):
             - There should be NO for-loops in this method 
         """ 
         # input data => embeddings 
+        #print("X_batch", X_batch.detach().numpy())
+        #print("X_batch shape:::", X_batch.shape)
         vecs = torch.FloatTensor(self.pretrained_embedding_matrix)
         embed = nn.Embedding.from_pretrained(vecs, freeze =True)
         input_tensor = torch.LongTensor(X_batch)
@@ -82,6 +83,8 @@ class DeepAveragingNetwork(nn.Module):
         third_dropout_layer = dropout(hid2)
         print(third_dropout_layer.shape)
         out = self.theta(third_dropout_layer)
+        print("OUT NUMPY:", out.detach().numpy())
+        print("out", {out.size()})
         log_probs = self.log_softmax(out)
         print(log_probs.shape)
         return log_probs
@@ -108,7 +111,7 @@ class DeepAveragingNetwork(nn.Module):
                 X_batch = X_train[batch_indices]
                 Y_batch = Y_train[batch_indices]
 
-            
+            print("X_batch", X_batch.detach().numpy())
             # Forward pass 
             pred = self.forward(X_batch)
             loss = loss_fn(pred, Y_batch)
@@ -182,16 +185,15 @@ def main():
     # close the file
     file.close()
     X_train = data[0]
-    Y_train = data[1]
+    print("FIRST", X_train.size())
+    Y_train = torch.LongTensor(data[1])
     X_dev = data[2]
-    Y_dev = data[3]
-    print(X_train)
+    Y_dev = torch.LongTensor(data[3])
     
     from preprocess import Twitter
     twitter = Twitter()
     embed_array = twitter.create_embeddings()
     #print(tweet_examples_test[0][0:5])
-
     from deepaverage import DeepAveragingNetwork
     model = DeepAveragingNetwork(2,embed_array,50, 20, 20, 0.01,0.1)
     loss_fn= nn.NLLLoss() #For binary logistic regression 
@@ -205,9 +207,9 @@ def main():
                                                              loss_fn, optimizer, NUMBER_ITERATIONS, 
                                                              batch_size = 200,
                                                              check_every=50, verbose=False)
-    print(loss_history)
-    print(train_accuracy)
-    print(dev_accuracy)
+    print("loss history", loss_history)
+    print("train accuracy", train_accuracy)
+    print("dev accuracy", dev_accuracy)
 
 if __name__ == '__main__':
     main()

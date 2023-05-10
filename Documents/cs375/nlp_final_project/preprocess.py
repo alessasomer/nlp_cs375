@@ -124,7 +124,7 @@ class Twitter:
        tknzr = TweetTokenizer()
        for t in tweet_examples:
            tokenized_tweet_examples.append(tknzr.tokenize(t))
-       return tokenized_tweet_examples
+       return tokenized_tweet_examples[1:]
 
 
    def create_embeddings(self) -> np.ndarray:
@@ -172,20 +172,64 @@ class Twitter:
        - (List[int]): list of integers
        """
        MAXIMUM_LENGTH = 50
+       X_list = []
        indexes = []
        for example in tweet_examples:
            for token in example:
+               indexes = []
                if self._vocab2indx.get(token) is not None:
+                   print("self vocab token", self._vocab2indx[token])
                    indexes.append(self._vocab2indx[token])
                else:
                    oov = "<OOV>"
                    indexes.append(self._vocab2indx[oov])
            #Truncate
+
            indexes = indexes[:MAXIMUM_LENGTH]
            #pad
            while len(indexes) < MAXIMUM_LENGTH:
                indexes.append(self._len_idx2vocab)
+           if len(indexes) != 50:
+               print(len(indexes))
+           print("X_list while in create train", X_list)
+           X_list.append(indexes)
+       print("X_list right before return", X_list)
+       return X_list
+   
+   def create_word_indices(self, tweet_example):
+       """
+       GIVEN ONE TWEET - a list of tokens - return list of indexes 
+       """
+       indexes = []
+       for token in tweet_example:
+            print("token", token)
+            if self._vocab2indx.get(token) is not None:
+                print("self vocab token", self._vocab2indx[token])
+                indexes.append(self._vocab2indx[token])
+            else:
+                oov = "<OOV>"
+                print("token not found")
+                indexes.append(self._vocab2indx[oov])
        return indexes
+   
+   def convert_X(self, examples):
+        MAXIMUM_LENGTH = 50
+        X_list = []
+        for one_train_example in examples: 
+            one_train_indices = self.create_word_indices(one_train_example)
+            print("one train indices before modify", one_train_indices)
+            one_train_indices = one_train_indices[:MAXIMUM_LENGTH]
+            #pad
+            while len(one_train_indices) < MAXIMUM_LENGTH:
+               one_train_indices.append(self._len_idx2vocab)
+            if len(one_train_indices) != 50:
+               print(len(one_train_indices))
+            X_list.append(one_train_indices)
+            if len(one_train_indices) != 50:
+                print(len(one_train_indices))
+        print("X before convert", X_list[0:5])
+        X = torch.LongTensor(X_list)
+        return X
   
    def get_Y_train(self):
         return torch.LongTensor(self._train_data[1])
@@ -204,22 +248,28 @@ class Twitter:
 def main():
    twitter = Twitter()
    twitter._train_data = twitter.create_tweetcsv_test()
-   tweet_examples_test = twitter.create_tokens(twitter._train_data[0])
-   twitter._dev_data = twitter.create_tweetcsv_test()
+   tweet_examples_train = twitter.create_tokens(twitter._train_data[0])
+   #print("create_tokens output", tweet_examples_test[0:5])
+   #print("create_tokens output first list", tweet_examples_test[0])
+   twitter._dev_data = twitter.create_tweetcsv_dev()
    tweet_examples_dev = twitter.create_tokens(twitter._dev_data[0])
+   print(tweet_examples_dev)
    twitter._embed_array = twitter.create_embeddings()
    #print(tweet_examples_test[0][0:5])
    #print(tweet_examples_test)
-   twitter._X_train_list = twitter.create_train(tweet_examples_test)
+   #hey = twitter.create_word_indices(tweet_examples_test[0])
+   X_train = twitter.convert_X(tweet_examples_train)
+   X_dev = twitter.convert_X(tweet_examples_dev)
+   #twitter._X_train_list = twitter.create_train(tweet_examples_test)
    #print(twitter._X_train_list)
-   twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
-   X_train = twitter.create_Xtrain_tensor()
-   X_dev = twitter.create_Xdev_tensor()
+   #twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
+   #print("X_train size", len(twitter._X_dev_list[0]))
+   #X_train = twitter.create_Xtrain_tensor()
+   #X_dev = twitter.create_Xdev_tensor()
    Y_train = twitter._train_data[1]
    Y_dev = twitter._dev_data[1]
-   #print(X_list[0:5])
    # open a file, where you ant to store the data
-   data = [X_train, X_dev, Y_train, Y_dev]
+   data = [X_train, Y_train, X_dev, Y_dev]
    file = open('mypickle.pickle', 'wb')
    # dump information to that file
    pickle.dump(data, file)

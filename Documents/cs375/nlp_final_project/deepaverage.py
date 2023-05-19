@@ -6,6 +6,7 @@ import torch.nn as nn
 import pandas as pd
 from nltk.tokenize import TweetTokenizer
 import pickle
+from sklearn.metrics import accuracy_score,recall_score,precision_score,f1_score
 
 class DeepAveragingNetwork(nn.Module):
     """
@@ -53,9 +54,6 @@ class DeepAveragingNetwork(nn.Module):
             - Look at Pytorch's implemenation of .mean()
             - There should be NO for-loops in this method 
         """ 
-        # input data => embeddings 
-        #print("X_batch", X_batch.detach().numpy())
-        #print("X_batch shape:::", X_batch.shape)
         vecs = torch.FloatTensor(self.pretrained_embedding_matrix)
         embed = nn.Embedding.from_pretrained(vecs, freeze =True)
         input_tensor = torch.LongTensor(X_batch)
@@ -65,28 +63,20 @@ class DeepAveragingNetwork(nn.Module):
         dropout_layer = dropout(input_embedded)
         #average across a row for x batch
         a = torch.mean(dropout_layer, 1)
-        print(a.shape)
         #pass "a" through hidden layer1
         hid1 = self.hidden1(a)
         
         #pass ouput of hidden layer through leakyrelu
         hid1 = nn.functional.leaky_relu(hid1, self.leaky_relu_negative_slope)
-        print(hid1.shape)
         
         #DO SECOND DROPOUT LAYER
         second_dropout_layer = dropout(hid1)
-        print(second_dropout_layer.shape)
         hid2 = self.hidden2(second_dropout_layer)
-        print(hid2.shape)
         hid2 = nn.functional.leaky_relu(hid2, self.leaky_relu_negative_slope)
         #DO THIRD DROPOUT LAYER
         third_dropout_layer = dropout(hid2)
-        print(third_dropout_layer.shape)
         out = self.theta(third_dropout_layer)
-        print("OUT NUMPY:", out.detach().numpy())
-        print("out", {out.size()})
         log_probs = self.log_softmax(out)
-        print(log_probs.shape)
         return log_probs
     
     def train_model(self, X_train, Y_train, X_dev, Y_dev, loss_fn, optimizer, num_iterations, batch_size = 500, check_every=10, verbose=False): 
@@ -101,6 +91,9 @@ class DeepAveragingNetwork(nn.Module):
         loss_history = [] #We'll record the loss for inspection
         train_accuracy = []
         dev_accuracy = []
+        precision = []
+        recall = []
+        f1 = []
 
         for t in range(num_iterations):
             if batch_size >= X_train.shape[0]: 
@@ -111,7 +104,7 @@ class DeepAveragingNetwork(nn.Module):
                 X_batch = X_train[batch_indices]
                 Y_batch = Y_train[batch_indices]
 
-            print("X_batch", X_batch.detach().numpy())
+            #print("X_batch", X_batch.detach().numpy())
             # Forward pass 
             pred = self.forward(X_batch)
             loss = loss_fn(pred, Y_batch)
@@ -137,10 +130,18 @@ class DeepAveragingNetwork(nn.Module):
                 dev_y_pred, _ = self.predict(X_dev)
                 dev_acc = self.accuracy(dev_y_pred, Y_dev.detach().numpy())
                 dev_accuracy.append(dev_acc)
-                
+                dev_precision = self.precision(dev_y_pred, Y_dev.detach().numpy())
+
+                precision.append(dev_precision)
+
+                dev_recall = self.recall(dev_y_pred, Y_dev.detach().numpy())
+                recall.append(dev_recall)
+
+                dev_f1 = self.f1(dev_y_pred, Y_dev.detach().numpy())
+                f1.append(dev_f1)
                 if verbose: print(f"Iteration={t}, Loss={loss_value}")
                 
-        return loss_history, train_accuracy, dev_accuracy
+        return loss_history, train_accuracy, dev_accuracy, precision, recall, f1
     
     def predict(self, X): 
         """
@@ -171,6 +172,26 @@ class DeepAveragingNetwork(nn.Module):
         Calculates accuracy. No need to modify this method. 
         """
         return np.mean(y_pred == y_true)
+    @staticmethod
+    def precision(y_pred: np.ndarray, y_true: np.ndarray) -> float:
+        """
+        Calculates accuracy. No need to modify this method.
+        """
+        return precision_score(y_true,y_pred)
+
+    @staticmethod
+    def recall(y_pred: np.ndarray, y_true: np.ndarray) -> float:
+        """
+        Calculates accuracy. No need to modify this method.
+        """
+        return recall_score(y_true,y_pred)
+
+    @staticmethod
+    def f1(y_pred: np.ndarray, y_true: np.ndarray) -> float:
+        """
+        Calculates accuracy. No need to modify this method.
+        """
+        return f1_score(y_true,y_pred)
     
 def main():
     LEARNING_RATE = 1e-1
@@ -180,12 +201,9 @@ def main():
     DROPOUT_PROB = 0.4 
     #get preprocessed data
     file = open('mypickle.pickle', 'rb')
-    # dump information to that file
     data = pickle.load(file)
-    # close the file
     file.close()
     X_train = data[0]
-    print("FIRST", X_train.size())
     Y_train = torch.LongTensor(data[1])
     X_dev = data[2]
     Y_dev = torch.LongTensor(data[3])
@@ -195,21 +213,59 @@ def main():
     embed_array = twitter.create_embeddings()
     #print(tweet_examples_test[0][0:5])
     from deepaverage import DeepAveragingNetwork
-    model = DeepAveragingNetwork(2,embed_array,50, 20, 20, 0.01,0.1)
-    loss_fn= nn.NLLLoss() #For binary logistic regression 
-    optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    #Grid Search
+
+    LEARNING_RATE = 1e-1
+    HIDDEN_DIM1 = 200
+    HIDDEN_DIM2 = 100
+    LEAKY_RELU_NEG_SLOPE = 0.01
+    DROPOUT_PROB = 0.4
+
+    opt_params=[]
+    max_acc = 0.0
+
+    for l_r in [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]:
+        for dropout_p in [0.0, 0.2, 0.4, 0.6, 0.8]:
+            for slope in [0.001, 0.005, 0.01, 0.05, 0.1]:
+                LEARNING_RATE = l_r
+                HIDDEN_DIM1 = 200
+                HIDDEN_DIM2 = 100
+                LEAKY_RELU_NEG_SLOPE = slope
+                DROPOUT_PROB = dropout_p
+                model = DeepAveragingNetwork(2,embed_array,50, HIDDEN_DIM1, HIDDEN_DIM2, LEAKY_RELU_NEG_SLOPE, DROPOUT_PROB)
+                loss_fn= nn.NLLLoss() #For binary logistic regression
+                optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
+                NUMBER_ITERATIONS = 300
+                loss_history, train_accuracy, dev_accuracy, precision, recall, f1 = model.train_model(X_train, Y_train, X_dev, Y_dev, loss_fn, optimizer, NUMBER_ITERATIONS, batch_size = 200, check_every=50, verbose=False)
+                if (dev_accuracy[1] > max_acc):
+                    max_acc = dev_accuracy[1]
+                    opt_params = [l_r, dropout_p, slope]
+
+    print("Gridsearch max accuracy=", max_acc)
+    print(opt_params)
+    #OUT FOR GRID SEARCH model = DeepAveragingNetwork(2,embed_array,50, 20, 20, 0.01,0.1)
+    #OUT FOR GRID SEARCH loss_fn= nn.NLLLoss() #For binary logistic regression 
+    # OUT FOR GRID SEARCHoptimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
     #Random inputs to check syntax
     #X_batch = torch.randint(low=0, high=len(vocab2indx), size=(100, 10))
     #print(X_batch.shape)
     #log_probs_out = model.forward(X_batch)
-    NUMBER_ITERATIONS = 300
-    loss_history, train_accuracy, dev_accuracy = model.train_model(X_train, Y_train, X_dev, Y_dev, 
-                                                             loss_fn, optimizer, NUMBER_ITERATIONS, 
-                                                             batch_size = 200,
-                                                             check_every=50, verbose=False)
+    #NUMBER_ITERATIONS = 300
+    #loss_history, train_accuracy, dev_accuracy, precision, recall, f1 = model.train_model(X_train, Y_train, X_dev, Y_dev, 
+    #                                                         loss_fn, optimizer, NUMBER_ITERATIONS, 
+     #                                                        batch_size = 200,
+     #                                                        check_every=50, verbose=False)
     print("loss history", loss_history)
-    print("train accuracy", train_accuracy)
-    print("dev accuracy", dev_accuracy)
+    print("train accuracy", train_accuracy[-1])
+    print("dev accuracy", dev_accuracy[-1])
+    print("Final precision = ", precision)
+    print("Final recall =", recall)
+    print("Final f1 =", f1)
+    #print("X_test before predict:", X_test)
+    #test_predictions = model.predict(X_test)
+    #predict_accuracy = model.accuracy(test_predictions, Y_test)
+    #print("predict accuracy", predict_accuracy)
+
 
 if __name__ == '__main__':
     main()

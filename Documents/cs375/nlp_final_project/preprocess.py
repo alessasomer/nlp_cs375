@@ -17,13 +17,14 @@ class Twitter:
        self._len_idx2vocab = int
        self._train_data = ([], [])
        self._dev_data = ([], [])
+       self._pred_data = ([], [])
        self._X_train_list = []
        self._X_dev_list = []
 
 
    def create_tweetcsv_test(self):
        trainingList =[]
-       with open('training.txt') as file_object:
+       with open('covid_train.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -62,13 +63,12 @@ class Twitter:
        df = pd.DataFrame(data, columns=columns)
        test_label_examples = df['Label'].tolist()
        test_tweet_examples = df['Tweet'].tolist()
-       #df.to_csv('tweets.csv')
        #NOTE: here tweet_examples has not been tokenized yet, and is a list of tweet texts NOT a list of words
        return test_tweet_examples, test_label_examples
-  
+   
    def create_tweetcsv_dev(self):
        trainingList =[]
-       with open('dev.txt') as file_object:
+       with open('covid_dev.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -114,6 +114,53 @@ class Twitter:
        #NOTE: here tweet_examples has not been tokenized yet, and is a list of tweet texts NOT a list of words
        return dev_tweet_examples, dev_label_examples
 
+   def create_tweets_predict(self, tweet_examples)-> list[list[str]]:
+        trainingList =[]
+        with open('covid_dev.txt') as file_object:
+           for jsonObj in file_object:
+               trainingDict = json.loads(jsonObj)
+               trainingList.append(trainingDict)
+
+
+        api_key = 'YEpNeLOhlYEL5OId1bCKenHxD'
+        api_key_secret = 'AdWfTqltmr7qKSOkOjujkipCGs08UuMjegYRLqpHkLT6Fv362L'
+        BEARER_TOKEN = 'AAAAAAAAAAAAAAAAAAAAAAOJnAEAAAAAyVKYaq6rfDF7NeHLThQ86hVJibk%3DatFtfDHbOAYzA3IcsLvfECssqqrk8uS4d8967dJFgD7Cs4dlCU'
+
+
+        access_token = "1651328402245185538-7yv4hOJshKAnLroHWEmq0T47TRdFML"
+        access_token_secret = "aWpwR6zzZsdqU6GixgTC8nuLDkr73jcGL83vKNDh259JM"
+
+
+        #authentication
+        auth = tweepy.OAuthHandler(api_key, api_key_secret)
+        auth.set_access_token(access_token, access_token_secret)
+
+
+        #call Api
+        api = tweepy.API(auth)
+
+
+        #create dataframe
+        columns = ['Label', 'Tweet']
+        data = []
+        for t in trainingList:
+            try:
+                status = api.get_status(t["id"])
+
+
+                #get text
+                text = status.text
+                #print(text)
+                data.append([t["label"], text])
+            except:
+                #print("Tweet with ID" , t["id"] , "does not exist")
+                continue
+        df = pd.DataFrame(data, columns=columns)
+        pred_label_examples = df['Label'].tolist()
+        pred_tweet_examples = df['Tweet'].tolist()
+        #df.to_csv('tweets.csv')
+        #NOTE: here tweet_examples has not been tokenized yet, and is a list of tweet texts NOT a list of words
+        return pred_tweet_examples, pred_label_examples
 
    def create_tokens(self, tweet_examples)-> list[list[str]]:
        """
@@ -254,12 +301,15 @@ def main():
    twitter._dev_data = twitter.create_tweetcsv_dev()
    tweet_examples_dev = twitter.create_tokens(twitter._dev_data[0])
    print(tweet_examples_dev)
+   twitter._pred_data = twitter.create_tweetcsv_test()
+   tweet_examples_pred = twitter.create_tokens(twitter._pred_data[0])
    twitter._embed_array = twitter.create_embeddings()
    #print(tweet_examples_test[0][0:5])
    #print(tweet_examples_test)
    #hey = twitter.create_word_indices(tweet_examples_test[0])
    X_train = twitter.convert_X(tweet_examples_train)
    X_dev = twitter.convert_X(tweet_examples_dev)
+   X_pred = twitter.convert_X(tweet_examples_pred)
    #twitter._X_train_list = twitter.create_train(tweet_examples_test)
    #print(twitter._X_train_list)
    #twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
@@ -268,8 +318,9 @@ def main():
    #X_dev = twitter.create_Xdev_tensor()
    Y_train = twitter._train_data[1]
    Y_dev = twitter._dev_data[1]
+   Y_pred = twitter._pred_data[1]
    # open a file, where you ant to store the data
-   data = [X_train, Y_train, X_dev, Y_dev]
+   data = [X_train, Y_train, X_dev, Y_dev, X_pred, Y_pred]
    file = open('mypickle.pickle', 'wb')
    # dump information to that file
    pickle.dump(data, file)

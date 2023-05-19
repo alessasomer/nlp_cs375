@@ -24,7 +24,7 @@ class Twitter:
 
    def create_tweetcsv_test(self):
        trainingList =[]
-       with open('covid_train.txt') as file_object:
+       with open('coronavirus_train.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -68,7 +68,7 @@ class Twitter:
    
    def create_tweetcsv_dev(self):
        trainingList =[]
-       with open('covid_dev.txt') as file_object:
+       with open('coronavirus_dev.txt') as file_object:
            for jsonObj in file_object:
                trainingDict = json.loads(jsonObj)
                trainingList.append(trainingDict)
@@ -304,16 +304,11 @@ def main():
    twitter._pred_data = twitter.create_tweetcsv_test()
    tweet_examples_pred = twitter.create_tokens(twitter._pred_data[0])
    twitter._embed_array = twitter.create_embeddings()
-   #print(tweet_examples_test[0][0:5])
-   #print(tweet_examples_test)
-   #hey = twitter.create_word_indices(tweet_examples_test[0])
    X_train = twitter.convert_X(tweet_examples_train)
    X_dev = twitter.convert_X(tweet_examples_dev)
    X_pred = twitter.convert_X(tweet_examples_pred)
    #twitter._X_train_list = twitter.create_train(tweet_examples_test)
-   #print(twitter._X_train_list)
    #twitter._X_dev_list = twitter.create_train(tweet_examples_dev)
-   #print("X_train size", len(twitter._X_dev_list[0]))
    #X_train = twitter.create_Xtrain_tensor()
    #X_dev = twitter.create_Xdev_tensor()
    Y_train = twitter._train_data[1]
